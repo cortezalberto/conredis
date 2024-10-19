@@ -1,0 +1,41 @@
+Este código es un controlador en una aplicación Spring Boot que se encarga de manejar solicitudes HTTP relacionadas con la API de Rick and Morty. Aquí hay una explicación detallada de lo que hace cada parte del código:
+
+@RestController: Esta es una anotación de Spring que indica que la clase es un controlador que manejará solicitudes HTTP y devolverá datos en formato JSON o XML, entre otros formatos.
+
+@RequestMapping("/rick"): Esta anotación mapea todas las solicitudes que comiencen con "/rick" a este controlador.
+
+@Autowired private RestTemplate restTemplate; y @Autowired private StringRedisTemplate redisTemplate;: Estas líneas están inyectando dos dependencias en el controlador. RestTemplate es una clase de Spring que se utiliza para realizar solicitudes HTTP a otras APIs. StringRedisTemplate es una clase de Spring Data Redis que se utiliza para interactuar con una base de datos Redis.
+
+private final String BASE_URL= "https://rickandmortyapi.com/api/character/";: Esta línea define la URL base de la API de Rick and Morty.
+
+@GetMapping("/{id}"): Esta anotación mapea las solicitudes GET que terminan con un ID (por ejemplo, "/rick/1") a este método.
+
+Dentro del método get, se intenta obtener los datos del personaje de Rick and Morty con el ID proporcionado de la base de datos Redis. Si los datos existen y no están vacíos, se devuelven en una respuesta HTTP con un código de estado 200.
+
+Si los datos no se encuentran en Redis, se realiza una solicitud GET a la API de Rick and Morty para obtener los datos del personaje. Si la solicitud es exitosa (código de estado 200), los datos se almacenan en Redis con una duración de 120 segundos y se devuelven en una respuesta HTTP.
+
+Si ocurre alguna excepción durante el proceso, se devuelve una respuesta HTTP con un código de estado 500 y el mensaje de error.
+
+private String getKey(String id) { return "RICK-".concat(id); }: Este método simplemente concatena la cadena "RICK-" con el ID proporcionado para formar una clave única para almacenar y recuperar datos de Redis.
+
+public ResponseEntity<?> get(@PathVariable("id") Integer id): Este es el método que maneja las solicitudes GET. El parámetro @PathVariable("id") Integer id indica que el ID del personaje se pasará como una variable de ruta en la URL. El tipo de retorno ResponseEntity<?> indica que el método devolverá una respuesta HTTP, que puede contener datos y un código de estado.
+
+HttpHeaders headers = new HttpHeaders();: Se crea un objeto HttpHeaders para establecer el tipo de contenido de la respuesta HTTP en application/json.
+
+ValueOperations<String, String> valueOp= redisTemplate.opsForValue();: Se obtiene una instancia de ValueOperations de redisTemplate, que se utiliza para realizar operaciones de lectura y escritura en la base de datos Redis.
+
+String data = valueOp.get(getKey(id.toString()));: Se intenta obtener los datos del personaje con el ID proporcionado de la base de datos Redis. El método getKey(id.toString()) se utiliza para generar una clave única para el personaje en Redis.
+
+if(data != null && !data.isEmpty()) { return new ResponseEntity<String>(data, headers , HttpStatus.OK); }: Si los datos se encuentran en Redis y no están vacíos, se devuelven en una respuesta HTTP con un código de estado 200.
+
+ResponseEntity<String> response = restTemplate.exchange(BASE_URL.concat(id.toString()), HttpMethod.GET , null , String.class);: Si los datos no se encuentran en Redis, se realiza una solicitud GET a la API de Rick and Morty para obtener los datos del personaje. La URL de la solicitud se construye concatenando la URL base con el ID del personaje.
+
+if(response.getStatusCodeValue() == 200) { valueOp.set(getKey(id.toString()), response.getBody() , Duration.ofSeconds(120)); }: Si la solicitud a la API de Rick and Morty es exitosa (código de estado 200), los datos del personaje se almacenan en Redis con una duración de 120 segundos.
+
+return new ResponseEntity<String>(response.getBody(), headers , HttpStatus.OK);: Finalmente, los datos del personaje se devuelven en una respuesta HTTP con un código de estado 200.
+
+catch (Exception e) { return new ResponseEntity<String>(e.getMessage(),HttpStatus.INTERNAL_SERVER_ERROR); }: Si ocurre alguna excepción durante el proceso, se devuelve una respuesta HTTP con un código de estado 500 y el mensaje de error.
+
+private String getKey(String id) { return "RICK-".concat(id); }: Este método simplemente concatena la cadena "RICK-" con el ID proporcionado para formar una clave única para almacenar y recuperar datos de Redis.
+
+http://localhost:8080/rick/35
